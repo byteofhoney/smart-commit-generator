@@ -1,26 +1,37 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { exec } from 'child_process';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "smart-commit-generator" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
 	const disposable = vscode.commands.registerCommand('smart-commit-generator.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from smart-commit-generator!');
+
+		// find the folder currently open in VS Code
+		const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+		if (!folder) {
+			vscode.window.showErrorMessage('No folder open.');
+			return;
+		}
+
+		// run "git diff --staged" inside that folder
+		exec('git diff --staged', { cwd: folder }, (error, stdout, stderr) => {
+			if (error) {
+				vscode.window.showErrorMessage('Error running git diff: ' + error.message);
+				return;
+			}
+
+			if (!stdout) {
+				vscode.window.showInformationMessage('Nothing staged. Stage a change first with git add.');
+				return;
+			}
+
+			// just print the raw diff to the output console for now
+			console.log(stdout);
+			vscode.window.showInformationMessage('Diff printed to console. Check Debug Console.');
+		});
 	});
 
 	context.subscriptions.push(disposable);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
