@@ -11,34 +11,33 @@ interface FileChange {
 }
 
 // Takes the raw diff text and turns it into a list of FileChange objects
-function parseDiff(diffText: string): FileChange[] {
-	const fileSections = diffText.split('diff --git ').slice(1); // drop empty first chunk
+function parseDiff(diffText: string): FileChange[] 
+{
+	const lines = diffText.split('\n');
 	const changes: FileChange[] = [];
+	let current: FileChange | null = null;
 
-	for (const section of fileSections) {
-		const lines = section.split('\n');
-
-		// first line looks like: a/src/extension.ts b/src/extension.ts
-		const firstLine = lines[0];
-		const fileName = firstLine.split(' ')[1]?.replace(/^b\//, '') ?? 'unknown file';
-
-		let added = 0;
-		let removed = 0;
-
-		for (const line of lines) {
-			if (line.startsWith('+++') || line.startsWith('---')) {
-				continue; // these are header lines, not actual changes
-			}
-			if (line.startsWith('+')) added++;
-			if (line.startsWith('-')) removed++;
+	for (const line of lines) {
+		// Only treat it as a new file section if it's at the START of a line
+		if (line.startsWith('diff --git ')) 
+		{
+			if (current) changes.push(current);
+			const fileName = line.split(' ')[3]?.replace(/^b\//, '') ?? 'unknown file';
+			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false };
+			continue;
 		}
 
-		const isNew = section.includes('new file mode');
-		const isDeleted = section.includes('deleted file mode');
+		if (!current) continue; // skip anything before the first real diff header
 
-		changes.push({ fileName, added, removed, isNew, isDeleted });
+		if (line.startsWith('new file mode')) current.isNew = true;
+		if (line.startsWith('deleted file mode')) current.isDeleted = true;
+
+		if (line.startsWith('+++') || line.startsWith('---')) continue;
+		if (line.startsWith('+')) current.added++;
+		if (line.startsWith('-')) current.removed++;
 	}
 
+	if (current) changes.push(current);
 	return changes;
 }
 
