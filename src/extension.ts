@@ -41,6 +41,38 @@ function parseDiff(diffText: string): FileChange[]
 	return changes;
 }
 
+// Looks at the parsed file changes and decides on a commit message
+function generateCommitMessage(changes: FileChange[]): string {
+	if (changes.length === 0) {
+		return 'chore: no changes detected';
+	}
+
+	const hasNewFile = changes.some(c => c.isNew);
+	const hasDeletedFile = changes.some(c => c.isDeleted);
+	const allDeleted = changes.every(c => c.isDeleted);
+	const allTestFiles = changes.every(c => /\.(test|spec)\.[jt]s$/.test(c.fileName));
+	const allDocFiles = changes.every(c => c.fileName.endsWith('.md'));
+
+	let prefix = 'fix'; // default fallback
+
+	if (allDeleted) {
+		prefix = 'chore';
+	} else if (allDocFiles) {
+		prefix = 'docs';
+	} else if (allTestFiles) {
+		prefix = 'test';
+	} else if (hasNewFile) {
+		prefix = 'feat';
+	} else if (hasDeletedFile) {
+		prefix = 'chore';
+	}
+
+	// build a short summary of which files changed
+	const fileList = changes.map(c => c.fileName.split('/').pop()).join(', ');
+
+	return `${prefix}: update ${fileList}`;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
 	const disposable = vscode.commands.registerCommand('smart-commit-generator.helloWorld', () => {
@@ -64,10 +96,13 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			const changes = parseDiff(stdout);
-			console.log(changes); // see the parsed result in Debug Console
+			const message = generateCommitMessage(changes);
 
-			vscode.window.showInformationMessage(`Parsed ${changes.length} file(s) changed.`);
-		});
+			console.log(changes);
+			console.log('Suggested message:', message);
+
+			vscode.window.showInformationMessage(`Suggested commit: ${message}`);
+					});
 	});
 
 	context.subscriptions.push(disposable);
