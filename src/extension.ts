@@ -21,23 +21,23 @@ function parseDiff(diffText: string): FileChange[]
 		// Only treat it as a new file section if it's at the START of a line
 		if (line.startsWith('diff --git ')) 
 		{
-			if (current) changes.push(current);
+			if (current) {changes.push(current);}
 			const fileName = line.split(' ')[3]?.replace(/^b\//, '') ?? 'unknown file';
 			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false };
 			continue;
 		}
 
-		if (!current) continue; // skip anything before the first real diff header
+		if (!current) {continue;} // skip anything before the first real diff header
 
-		if (line.startsWith('new file mode')) current.isNew = true;
-		if (line.startsWith('deleted file mode')) current.isDeleted = true;
+		if (line.startsWith('new file mode')) {current.isNew = true;}
+		if (line.startsWith('deleted file mode')) {current.isDeleted = true;}
 
-		if (line.startsWith('+++') || line.startsWith('---')) continue;
-		if (line.startsWith('+')) current.added++;
-		if (line.startsWith('-')) current.removed++;
+		if (line.startsWith('+++') || line.startsWith('---')) {continue;}
+		if (line.startsWith('+')) {current.added++;}
+		if (line.startsWith('-')) {current.removed++;}
 	}
 
-	if (current) changes.push(current);
+	if (current) {changes.push(current);}
 	return changes;
 }
 
@@ -75,7 +75,7 @@ function generateCommitMessage(changes: FileChange[]): string {
 
 export function activate(context: vscode.ExtensionContext) {
 
-	const disposable = vscode.commands.registerCommand('smart-commit-generator.helloWorld', () => {
+	const disposable = vscode.commands.registerCommand('smart-commit-generator.suggestCommit', () => {
 
 		const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
@@ -101,8 +101,22 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(changes);
 			console.log('Suggested message:', message);
 
-			vscode.window.showInformationMessage(`Suggested commit: ${message}`);
-					});
+			// Push the message into VS Code's built-in Git extension's commit input box
+						const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
+			console.log('gitExtension found:', !!gitExtension);
+
+			const api = gitExtension?.getAPI(1);
+			console.log('repositories found:', api?.repositories.length);
+
+			const repo = api?.repositories[0];
+
+			if (repo) {
+				repo.inputBox.value = message;
+				vscode.window.showInformationMessage(`Commit message set: ${message}`);
+			} else {
+				vscode.window.showInformationMessage(`Suggested commit: ${message}`);
+			}
+		});
 	});
 
 	context.subscriptions.push(disposable);
