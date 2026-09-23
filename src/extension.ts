@@ -80,40 +80,48 @@ export function activate(context: vscode.ExtensionContext) {
 		const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
 		if (!folder) {
-			vscode.window.showErrorMessage('No folder open.');
+			vscode.window.showErrorMessage('Open a folder first — no workspace is currently open.');
 			return;
 		}
 
 		exec('git diff --staged', { cwd: folder }, (error, stdout, stderr) => {
 			if (error) {
-				vscode.window.showErrorMessage('Error running git diff: ' + error.message);
+				// Different error messages point to different real causes
+				if (error.message.includes('not a git repository')) {
+					vscode.window.showErrorMessage('This folder is not a git repository.');
+				} else if (error.message.includes('not recognized') || error.message.includes('command not found')) {
+					vscode.window.showErrorMessage('Git does not seem to be installed or is not on your PATH.');
+				} else {
+					vscode.window.showErrorMessage('Error running git diff: ' + error.message);
+				}
 				return;
 			}
 
 			if (!stdout) {
-				vscode.window.showInformationMessage('Nothing staged. Stage a change first with git add.');
+				vscode.window.showInformationMessage('Nothing staged. Run "git add" on a file first.');
 				return;
 			}
 
 			const changes = parseDiff(stdout);
-			const message = generateCommitMessage(changes);
 
+			if (changes.length === 0) {
+				vscode.window.showInformationMessage('No file changes could be parsed from the diff.');
+				return;
+			}
+
+			const message = generateCommitMessage(changes);
 			console.log(changes);
 			console.log('Suggested message:', message);
 
-			// Push the message into VS Code's built-in Git extension's commit input box
-						const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
-			console.log('gitExtension found:', !!gitExtension);
-
+			const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
 			const api = gitExtension?.getAPI(1);
-			console.log('repositories found:', api?.repositories.length);
-
 			const repo = api?.repositories[0];
 
 			if (repo) {
 				repo.inputBox.value = message;
 				vscode.window.showInformationMessage(`Commit message set: ${message}`);
 			} else {
+				// Fallback: still useful even if we can't reach the Source Control box
 				vscode.window.showInformationMessage(`Suggested commit: ${message}`);
 			}
 		});
