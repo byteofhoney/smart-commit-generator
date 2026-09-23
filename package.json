@@ -11,14 +11,16 @@
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
+  
   "contributes": {
-    "commands": [
-      {
-        "command": "smart-commit-generator.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+      "commands": [
+          {
+              "command": "smart-commit-generator.suggestCommit",
+              "title": "Smart Commit: Suggest Commit Message"
+          }
+      ]
   },
+
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",

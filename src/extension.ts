@@ -21,52 +21,109 @@ function parseDiff(diffText: string): FileChange[]
 		// Only treat it as a new file section if it's at the START of a line
 		if (line.startsWith('diff --git ')) 
 		{
-			if (current) changes.push(current);
+			if (current) {changes.push(current);}
 			const fileName = line.split(' ')[3]?.replace(/^b\//, '') ?? 'unknown file';
 			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false };
 			continue;
 		}
 
-		if (!current) continue; // skip anything before the first real diff header
+		if (!current) {continue;} // skip anything before the first real diff header
 
-		if (line.startsWith('new file mode')) current.isNew = true;
-		if (line.startsWith('deleted file mode')) current.isDeleted = true;
+		if (line.startsWith('new file mode')) {current.isNew = true;}
+		if (line.startsWith('deleted file mode')) {current.isDeleted = true;}
 
-		if (line.startsWith('+++') || line.startsWith('---')) continue;
-		if (line.startsWith('+')) current.added++;
-		if (line.startsWith('-')) current.removed++;
+		if (line.startsWith('+++') || line.startsWith('---')) {continue;}
+		if (line.startsWith('+')) {current.added++;}
+		if (line.startsWith('-')) {current.removed++;}
 	}
 
-	if (current) changes.push(current);
+	if (current) {changes.push(current);}
 	return changes;
+}
+
+// Looks at the parsed file changes and decides on a commit message
+function generateCommitMessage(changes: FileChange[]): string {
+	if (changes.length === 0) {
+		return 'chore: no changes detected';
+	}
+
+	const hasNewFile = changes.some(c => c.isNew);
+	const hasDeletedFile = changes.some(c => c.isDeleted);
+	const allDeleted = changes.every(c => c.isDeleted);
+	const allTestFiles = changes.every(c => /\.(test|spec)\.[jt]s$/.test(c.fileName));
+	const allDocFiles = changes.every(c => c.fileName.endsWith('.md'));
+
+	let prefix = 'fix'; // default fallback
+
+	if (allDeleted) {
+		prefix = 'chore';
+	} else if (allDocFiles) {
+		prefix = 'docs';
+	} else if (allTestFiles) {
+		prefix = 'test';
+	} else if (hasNewFile) {
+		prefix = 'feat';
+	} else if (hasDeletedFile) {
+		prefix = 'chore';
+	}
+
+	// build a short summary of which files changed
+	const fileList = changes.map(c => c.fileName.split('/').pop()).join(', ');
+
+	return `${prefix}: update ${fileList}`;
 }
 
 export function activate(context: vscode.ExtensionContext) {
 
-	const disposable = vscode.commands.registerCommand('smart-commit-generator.helloWorld', () => {
+	const disposable = vscode.commands.registerCommand('smart-commit-generator.suggestCommit', () => {
 
 		const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
 		if (!folder) {
-			vscode.window.showErrorMessage('No folder open.');
+			vscode.window.showErrorMessage('Open a folder first — no workspace is currently open.');
 			return;
 		}
 
 		exec('git diff --staged', { cwd: folder }, (error, stdout, stderr) => {
 			if (error) {
-				vscode.window.showErrorMessage('Error running git diff: ' + error.message);
+				// Different error messages point to different real causes
+				if (error.message.includes('not a git repository')) {
+					vscode.window.showErrorMessage('This folder is not a git repository.');
+				} else if (error.message.includes('not recognized') || error.message.includes('command not found')) {
+					vscode.window.showErrorMessage('Git does not seem to be installed or is not on your PATH.');
+				} else {
+					vscode.window.showErrorMessage('Error running git diff: ' + error.message);
+				}
 				return;
 			}
 
 			if (!stdout) {
-				vscode.window.showInformationMessage('Nothing staged. Stage a change first with git add.');
+				vscode.window.showInformationMessage('Nothing staged. Run "git add" on a file first.');
 				return;
 			}
 
 			const changes = parseDiff(stdout);
-			console.log(changes); // see the parsed result in Debug Console
 
-			vscode.window.showInformationMessage(`Parsed ${changes.length} file(s) changed.`);
+			if (changes.length === 0) {
+				vscode.window.showInformationMessage('No file changes could be parsed from the diff.');
+				return;
+			}
+
+			const message = generateCommitMessage(changes);
+			console.log(changes);
+			console.log('Suggested message:', message);
+
+			const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
+			const api = gitExtension?.getAPI(1);
+			const repo = api?.repositories[0];
+
+			if (repo) {
+				repo.inputBox.value = message;
+				vscode.window.showInformationMessage(`Commit message set: ${message}`);
+			} else {
+				// Fallback: still useful even if we can't reach the Source Control box
+				vscode.window.showInformationMessage(`Suggested commit: ${message}`);
+			}
 		});
 	});
 
