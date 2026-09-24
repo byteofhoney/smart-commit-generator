@@ -12,14 +12,32 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   
-  "contributes": {
-      "commands": [
-          {
-              "command": "smart-commit-generator.suggestCommit",
-              "title": "Smart Commit: Suggest Commit Message"
-          }
-      ]
-  },
+"contributes": {
+    "commands": [
+        {
+            "command": "smart-commit-generator.suggestCommit",
+            "title": "Smart Commit: Suggest Commit Message",
+            "icon": "$(sparkle)"
+        }
+    ],
+    "menus": {
+        "scm/title": [
+            {
+                "command": "smart-commit-generator.suggestCommit",
+                "when": "scmProvider == git",
+                "group": "navigation"
+            }
+        ]
+    },
+    "keybindings": [
+        {
+            "command": "smart-commit-generator.suggestCommit",
+            "key": "ctrl+alt+m",
+            "mac": "cmd+alt+m",
+            "when": "editorTextFocus || scmProvider == git"
+        }
+    ]
+},
 
   "scripts": {
     "vscode:prepublish": "npm run package",
