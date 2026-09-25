@@ -1,5 +1,6 @@
 # Smart Commit Generator
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white)
 ![VS Code](https://img.shields.io/badge/VS%20Code%20Extension-007ACC?style=flat&logo=visualstudiocode&logoColor=white)
 ![esbuild](https://img.shields.io/badge/esbuild-FFCF00?style=flat&logo=esbuild&logoColor=black)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
