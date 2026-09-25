@@ -5,8 +5,8 @@ A VS Code extension that looks at your staged git changes and suggests a commit 
 ## What it does
 
 1. Reads your currently **staged** changes (`git diff --staged`)
-2. Figures out what kind of change it is — new file, deleted file, test
-   file, docs, or a regular edit
+2. Figures out what kind of change it is: new file, deleted file, test
+   file, docs or a regular edit
 3. Suggests a commit message in **conventional-commit style**
    (e.g. `feat: update extension.ts`, `docs: update README.md`)
 4. Drops that message straight into the Source Control commit box, ready
@@ -32,7 +32,7 @@ The extension looks at the staged diff and applies a few simple rules:
 - Any file is brand new → `feat:`
 - Otherwise → `fix:`
 
-This is deliberately simple, rule-based logic, no AI involved  so it's
+This is deliberately simple, rule based logic, no AI involved  so it's
 fast, predictable and works completely offline.
 
 ## Requirements
