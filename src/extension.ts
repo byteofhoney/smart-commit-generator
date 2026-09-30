@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 
 // A simple shape to hold info about one changed file
-interface FileChange {
+export interface FileChange {
 	fileName: string;
 	added: number;
 	removed: number;
@@ -11,7 +11,7 @@ interface FileChange {
 }
 
 // Takes the raw diff text and turns it into a list of FileChange objects
-function parseDiff(diffText: string): FileChange[] 
+export function parseDiff(diffText: string): FileChange[] 
 {
 	const lines = diffText.split('\n');
 	const changes: FileChange[] = [];
@@ -42,7 +42,7 @@ function parseDiff(diffText: string): FileChange[]
 }
 
 // Looks at the parsed file changes and decides on a commit message
-function generateCommitMessage(changes: FileChange[]): string {
+export function generateCommitMessage(changes: FileChange[]): string {
 	if (changes.length === 0) {
 		return 'chore: no changes detected';
 	}
