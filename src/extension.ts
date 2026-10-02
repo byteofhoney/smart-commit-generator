@@ -13,33 +13,38 @@ export interface FileChange {
 }
 
 // Takes the raw diff text and turns it into a list of FileChange objects
-export function parseDiff(diffText: string): FileChange[] 
-{
+export function parseDiff(diffText: string): FileChange[] {
 	const lines = diffText.split('\n');
 	const changes: FileChange[] = [];
 	let current: FileChange | null = null;
 
 	for (const line of lines) {
-		// Only treat it as a new file section if it's at the START of a line
-		if (line.startsWith('diff --git ')) 
-		{
-			if (current) {changes.push(current);}
+		if (line.startsWith('diff --git ')) {
+			if (current) changes.push(current);
 			const fileName = line.split(' ')[3]?.replace(/^b\//, '') ?? 'unknown file';
-			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false };
+			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false, isRenamed: false };
 			continue;
 		}
 
-		if (!current) {continue;} // skip anything before the first real diff header
+		if (!current) continue;
 
-		if (line.startsWith('new file mode')) {current.isNew = true;}
-		if (line.startsWith('deleted file mode')) {current.isDeleted = true;}
+		if (line.startsWith('new file mode')) current.isNew = true;
+		if (line.startsWith('deleted file mode')) current.isDeleted = true;
 
-		if (line.startsWith('+++') || line.startsWith('---')) {continue;}
-		if (line.startsWith('+')) {current.added++;}
-		if (line.startsWith('-')) {current.removed++;}
+		if (line.startsWith('rename from ')) {
+			current.isRenamed = true;
+			current.oldFileName = line.replace('rename from ', '').trim();
+		}
+		if (line.startsWith('rename to ')) {
+			current.fileName = line.replace('rename to ', '').trim();
+		}
+
+		if (line.startsWith('+++') || line.startsWith('---')) continue;
+		if (line.startsWith('+')) current.added++;
+		if (line.startsWith('-')) current.removed++;
 	}
 
-	if (current) {changes.push(current);}
+	if (current) changes.push(current);
 	return changes;
 }
 

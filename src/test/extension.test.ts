@@ -70,6 +70,25 @@ index 111..222 100644
 		const result = parseDiff(diff);
 		assert.strictEqual(result.length, 1); // should NOT be treated as 2 files
 	});
+	test('detects a renamed file', () => {
+		const diff = `diff --git a/src/old-name.ts b/src/new-name.ts
+similarity index 95%
+rename from src/old-name.ts
+rename to src/new-name.ts
+index 111..222 100644
+--- a/src/old-name.ts
++++ b/src/new-name.ts
+@@ -1,2 +1,2 @@
+ line one
+-old line
++new line
+`;
+		const result = parseDiff(diff);
+		assert.strictEqual(result[0].isRenamed, true);
+		assert.strictEqual(result[0].oldFileName, 'src/old-name.ts');
+		assert.strictEqual(result[0].fileName, 'src/new-name.ts');
+	});
+
 });
 
 suite('generateCommitMessage', () => {
