@@ -8,6 +8,8 @@ export interface FileChange {
 	removed: number;
 	isNew: boolean;
 	isDeleted: boolean;
+	isRenamed: boolean;
+	oldFileName?: string;
 }
 
 // Takes the raw diff text and turns it into a list of FileChange objects
