@@ -129,4 +129,30 @@ suite('generateCommitMessage', () => {
 		const result = generateCommitMessage(changes);
 		assert.ok(result.startsWith('fix:'));
 	});
+		test('detects a renamed file', () => {
+		const diff = `diff --git a/src/old-name.ts b/src/new-name.ts
+similarity index 95%
+rename from src/old-name.ts
+rename to src/new-name.ts
+index 111..222 100644
+--- a/src/old-name.ts
++++ b/src/new-name.ts
+@@ -1,2 +1,2 @@
+ line one
+-old line
++new line
+`;
+		const result = parseDiff(diff);
+		assert.strictEqual(result[0].isRenamed, true);
+		assert.strictEqual(result[0].oldFileName, 'src/old-name.ts');
+		assert.strictEqual(result[0].fileName, 'src/new-name.ts');
+	});
+
+		test('returns refactor when a file is renamed', () => {
+		const changes: FileChange[] = [
+			{ fileName: 'src/new-name.ts', added: 1, removed: 1, isNew: false, isDeleted: false, isRenamed: true, oldFileName: 'src/old-name.ts' }
+		];
+		const result = generateCommitMessage(changes);
+		assert.ok(result.startsWith('refactor:'));
+	});
 });
