@@ -57,13 +57,16 @@ export function generateCommitMessage(changes: FileChange[]): string {
 	const hasNewFile = changes.some(c => c.isNew);
 	const hasDeletedFile = changes.some(c => c.isDeleted);
 	const allDeleted = changes.every(c => c.isDeleted);
+	const allRenamed = changes.every(c => c.isRenamed);
 	const allTestFiles = changes.every(c => /\.(test|spec)\.[jt]s$/.test(c.fileName));
 	const allDocFiles = changes.every(c => c.fileName.endsWith('.md'));
 
-	let prefix = 'fix'; // default fallback
+	let prefix = 'fix';
 
 	if (allDeleted) {
 		prefix = 'chore';
+	} else if (allRenamed) {
+		prefix = 'refactor';
 	} else if (allDocFiles) {
 		prefix = 'docs';
 	} else if (allTestFiles) {
@@ -74,7 +77,6 @@ export function generateCommitMessage(changes: FileChange[]): string {
 		prefix = 'chore';
 	}
 
-	// build a short summary of which files changed
 	const fileList = changes.map(c => c.fileName.split('/').pop()).join(', ');
 
 	return `${prefix}: update ${fileList}`;
