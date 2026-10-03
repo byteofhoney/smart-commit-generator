@@ -8,36 +8,43 @@ export interface FileChange {
 	removed: number;
 	isNew: boolean;
 	isDeleted: boolean;
+	isRenamed: boolean;
+	oldFileName?: string;
 }
 
 // Takes the raw diff text and turns it into a list of FileChange objects
-export function parseDiff(diffText: string): FileChange[] 
-{
+export function parseDiff(diffText: string): FileChange[] {
 	const lines = diffText.split('\n');
 	const changes: FileChange[] = [];
 	let current: FileChange | null = null;
 
 	for (const line of lines) {
-		// Only treat it as a new file section if it's at the START of a line
-		if (line.startsWith('diff --git ')) 
-		{
-			if (current) {changes.push(current);}
+		if (line.startsWith('diff --git ')) {
+			if (current) changes.push(current);
 			const fileName = line.split(' ')[3]?.replace(/^b\//, '') ?? 'unknown file';
-			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false };
+			current = { fileName, added: 0, removed: 0, isNew: false, isDeleted: false, isRenamed: false };
 			continue;
 		}
 
-		if (!current) {continue;} // skip anything before the first real diff header
+		if (!current) continue;
 
-		if (line.startsWith('new file mode')) {current.isNew = true;}
-		if (line.startsWith('deleted file mode')) {current.isDeleted = true;}
+		if (line.startsWith('new file mode')) current.isNew = true;
+		if (line.startsWith('deleted file mode')) current.isDeleted = true;
 
-		if (line.startsWith('+++') || line.startsWith('---')) {continue;}
-		if (line.startsWith('+')) {current.added++;}
-		if (line.startsWith('-')) {current.removed++;}
+		if (line.startsWith('rename from ')) {
+			current.isRenamed = true;
+			current.oldFileName = line.replace('rename from ', '').trim();
+		}
+		if (line.startsWith('rename to ')) {
+			current.fileName = line.replace('rename to ', '').trim();
+		}
+
+		if (line.startsWith('+++') || line.startsWith('---')) continue;
+		if (line.startsWith('+')) current.added++;
+		if (line.startsWith('-')) current.removed++;
 	}
 
-	if (current) {changes.push(current);}
+	if (current) changes.push(current);
 	return changes;
 }
 
@@ -50,13 +57,16 @@ export function generateCommitMessage(changes: FileChange[]): string {
 	const hasNewFile = changes.some(c => c.isNew);
 	const hasDeletedFile = changes.some(c => c.isDeleted);
 	const allDeleted = changes.every(c => c.isDeleted);
+	const allRenamed = changes.every(c => c.isRenamed);
 	const allTestFiles = changes.every(c => /\.(test|spec)\.[jt]s$/.test(c.fileName));
 	const allDocFiles = changes.every(c => c.fileName.endsWith('.md'));
 
-	let prefix = 'fix'; // default fallback
+	let prefix = 'fix';
 
 	if (allDeleted) {
 		prefix = 'chore';
+	} else if (allRenamed) {
+		prefix = 'refactor';
 	} else if (allDocFiles) {
 		prefix = 'docs';
 	} else if (allTestFiles) {
@@ -67,7 +77,6 @@ export function generateCommitMessage(changes: FileChange[]): string {
 		prefix = 'chore';
 	}
 
-	// build a short summary of which files changed
 	const fileList = changes.map(c => c.fileName.split('/').pop()).join(', ');
 
 	return `${prefix}: update ${fileList}`;
